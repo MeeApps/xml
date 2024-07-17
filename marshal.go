@@ -490,7 +490,7 @@ func (p *printer) marshalValue(val reflect.Value, finfo *fieldInfo, startTemplat
 		start.Attr = append(start.Attr, startTemplate.Attr...)
 	} else if tinfo.xmlname != nil {
 		xmlname := tinfo.xmlname
-		if xmlname.name != "" && (finfo != nil && finfo.xmlns == "") {
+		if xmlname.name != "" && ((finfo != nil && finfo.xmlns == "") || finfo == nil) {
 			//if (finfo != nil && xmlname.xmlns=="") {
 			//}else if  {
 			//	start.Name.OtherName = xmlname.xmlns
