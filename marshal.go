@@ -490,9 +490,17 @@ func (p *printer) marshalValue(val reflect.Value, finfo *fieldInfo, startTemplat
 		start.Attr = append(start.Attr, startTemplate.Attr...)
 	} else if tinfo.xmlname != nil {
 		xmlname := tinfo.xmlname
-		if xmlname.name != "" {
+		if xmlname.name != "" && (finfo != nil && finfo.xmlns == "") {
+			//if (finfo != nil && xmlname.xmlns=="") {
+			//}else if  {
+			//	start.Name.OtherName = xmlname.xmlns
+			//	//start.Name.Space, start.Name.Local = xmlname.xmlns, xmlname.name
+			//}
 			start.Name.Space, start.Name.Local = xmlname.xmlns, xmlname.name
+		} else if (finfo != nil && finfo.xmlns != xmlname.xmlns) && xmlname.name != "" && xmlname.xmlns != "" {
+			start.Name.OtherName = xmlname.xmlns
 		} else {
+
 			fv := xmlname.value(val, dontInitNilPointers)
 			if v, ok := fv.Interface().(Name); ok && v.Local != "" {
 				start.Name = v
@@ -540,7 +548,7 @@ func (p *printer) marshalValue(val reflect.Value, finfo *fieldInfo, startTemplat
 	if tinfo.xmlname != nil && start.Name.Space == "" &&
 		tinfo.xmlname.xmlns == "" && tinfo.xmlname.name == "" &&
 		len(p.tags) != 0 && p.tags[len(p.tags)-1].Space != "" {
-		start.Attr = append(start.Attr, Attr{Name{"", xmlnsPrefix}, ""})
+		start.Attr = append(start.Attr, Attr{Name{"", xmlnsPrefix, ""}, ""})
 	}
 	if err := p.writeStart(&start); err != nil {
 		return err
@@ -713,7 +721,6 @@ func (p *printer) writeStart(start *StartElement) error {
 	if start.Name.Local == "" {
 		return fmt.Errorf("xml: start tag with no name")
 	}
-
 	p.markPrefix()
 	p.localAttrNS = make([]Attr, 0)
 	p.writeIndent(1)
@@ -721,7 +728,11 @@ func (p *printer) writeStart(start *StartElement) error {
 
 	if l := len(p.tags); start.Name.Space == "" && l > 0 {
 		//promote the default namespace of previous element to this tag
-		start.Name.Space = p.tags[l-1].Space
+		if p.tags[l-1].OtherName != "" {
+			start.Name.Space = p.tags[l-1].OtherName
+		} else {
+			start.Name.Space = p.tags[l-1].Space
+		}
 		for _, a := range start.Attr {
 			if a.Value == "" && a.Name.Local == xmlnsPrefix && a.Name.Space == "" {
 				//override element namespace with explicit empty namespace when given
@@ -742,8 +753,8 @@ func (p *printer) writeStart(start *StartElement) error {
 			continue
 		}
 		if name.Space != "" {
-
 			pf := p.createAttrPrefix(name.Space)
+
 			start.Attr[i].Name.Local = pf + ":" + name.Local
 			start.Attr[i].Name.Space = name.Space + name.Local
 		}
@@ -763,6 +774,7 @@ func (p *printer) writeStart(start *StartElement) error {
 		p.WriteByte('"')
 	}
 	p.WriteByte('>')
+
 	return nil
 }
 
@@ -777,7 +789,11 @@ func (p *printer) writeEnd(name Name) error {
 		if top.Local != name.Local {
 			return fmt.Errorf("xml: end tag </%s> does not match start tag <%s>", name.Local, top.Local)
 		}
-		return fmt.Errorf("xml: end tag </%s> in namespace %s does not match start tag <%s> in namespace %s", name.Local, name.Space, top.Local, top.Space)
+		if top.Space == name.OtherName {
+			name.Space = top.Space
+		} else {
+			return fmt.Errorf("xml: end tag </%s> in namespace %s does not match start tag <%s> in namespace %s", name.Local, name.Space, top.Local, top.Space)
+		}
 	}
 	p.tags = p.tags[:len(p.tags)-1]
 	elName := name.Local
