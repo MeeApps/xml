@@ -1,3 +1,3 @@
-module github.com/m29h/xml
+module github.com/OmerBerkcanMee/xml
 
-go 1.21.1
+go 1.22.4
