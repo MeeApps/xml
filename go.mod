@@ -1,3 +1,3 @@
-module github.com/MeeApps/xml
+module github.com/OmerBerkcanMee/xml
 
-go 1.22.4
+go 1.21.1
